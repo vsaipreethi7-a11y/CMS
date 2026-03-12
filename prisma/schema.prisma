@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  posts     Post[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id              String    @id @default(cuid())
+  title           String
+  slug            String    @unique @default(cuid())
+  content         String?
+  url             String?
+  status          String    @default("draft") // draft | published
+  published       Boolean   @default(false)
+  authorId        String
+  author          User      @relation(fields: [authorId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  linkAnalysis    LinkAnalysis?
+  hyperlinks      AutoHyperlink[]
+  kmReport        KMReport?
+}
+
+model LinkAnalysis {
+  id                String   @id @default(cuid())
+  postId            String   @unique
+  post              Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  pageTitle         String
+  pageSummary       String
+  orphanRisk        String   // low | medium | high
+  totalOpportunities Int
+  opportunities     String   // stores JSON string or use supported JSON field (SQLite does not support Json natively in Prisma 6, use String)
+  createdAt         DateTime @default(now())
+}
+
+model AutoHyperlink {
+  id             String   @id @default(cuid())
+  postId         String
+  post           Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  originalWordCount Int
+  linksInjected  Int
+  linkDensity    Float
+  processedHtml  String
+  linkMap        String   // stores JSON string
+  createdAt      DateTime @default(now())
+}
+
+model KMReport {
+  id              String   @id @default(cuid())
+  postId          String   @unique
+  post            Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  siteUrl         String
+  overallKMScore  Int
+  metrics         String   // JSON string
+  knowledgeGaps   String   // JSON string
+  topTopics       String   // JSON string
+  recommendations String   // JSON string
+  createdAt       DateTime @default(now())
+}
+
+model AgentLog {
+  id         String   @id @default(cuid())
+  agentType  String   // link-discovery | auto-hyperlink | km-density
+  postId     String?
+  input      String
+  status     String   // success | error
+  duration   Int      // ms
+  createdAt  DateTime @default(now())
+}
+
